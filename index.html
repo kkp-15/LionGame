@@ -52,8 +52,8 @@
     </style>
 </head>
 <body>
-    <div id="title">ライオンゲーム</div>  <!-- タイトル表示 -->
-    <div id="game-board">
+    <div id="title">ライオンゲーム</div>
+    <div id="game-board" onclick="dropAnimal()"> <!-- クリックで動物を落とす -->
         <div id="score">スコア: 0</div>
     </div>
 
@@ -81,37 +81,82 @@
             '🦁': 60  // 🦁が最も大きい
         };
 
-        function createAnimal(type, x, y) {
+        let currentX = Math.floor(Math.random() * 10) * 30; // 初期位置
+        let startTouchX = 0;
+        let offsetX = 0;
+
+        // 位置を更新
+        function updateAnimalPosition() {
+            const animalPosition = document.getElementById('current-animal');
+            if (animalPosition) {
+                animalPosition.style.left = `${currentX}px`;
+            }
+        }
+
+        // フリック操作で動物の位置を動かす
+        board.addEventListener('touchstart', (e) => {
+            startTouchX = e.touches[0].pageX;  // 最初のタッチ位置
+        });
+
+        board.addEventListener('touchmove', (e) => {
+            offsetX = e.touches[0].pageX - startTouchX;  // 移動量を計算
+            currentX = Math.max(0, Math.min(board.offsetWidth - 30, currentX + offsetX));
+            startTouchX = e.touches[0].pageX;  // 新しいタッチ位置を保存
+            updateAnimalPosition();  // 動物の位置を更新
+        });
+
+        // フリック終了後に動物を落とす
+        board.addEventListener('touchend', (e) => {
+            dropAnimal();  // 動物を落とす
+        });
+
+        function createAnimal(type) {
             const animal = document.createElement('div');
+            animal.id = 'current-animal';  // 一時的な動物のID
             animal.classList.add('animal');
             animal.textContent = type;
-            animal.style.top = `${y}px`;
-            animal.style.left = `${x}px`;
+            animal.style.top = `0px`;
+            animal.style.left = `${currentX}px`;
             animal.style.fontSize = `${animalSizes[type]}px`;  // サイズを進化に合わせて変更
             board.appendChild(animal);
-            animals.push({ type, x, y, element: animal });
         }
 
         function dropAnimal() {
             const randomAnimal = animalTypes[Math.floor(Math.random() * animalTypes.length)];
-            createAnimal(randomAnimal, Math.floor(Math.random() * 10) * 30, 0);
+            createAnimal(randomAnimal);
+            moveAnimals();
         }
 
-        function gameLoop() {
-            dropAnimal();
-            moveAnimals();  // 落ちた動物を移動
-            checkAndEvolve();  // 進化チェック
-            checkGameOver();   // ゲームオーバーチェック
-            requestAnimationFrame(gameLoop);  // ゲームループ
+        function isOverlapping(x, y) {
+            // 既存の動物と重なっているか判定
+            return animals.some(animal => {
+                const animalX = animal.x;
+                const animalY = animal.y;
+                const animalSize = animalSizes[animal.type];
+                const newSize = animalSizes['🐧']; // 動物が落ちる大きさ
+                const buffer = 5; // 衝突回避のバッファ
+                return (
+                    x < animalX + animalSize + buffer &&
+                    x + newSize > animalX - buffer &&
+                    y < animalY + animalSize + buffer &&
+                    y + newSize > animalY - buffer
+                );
+            });
         }
 
         function moveAnimals() {
-            animals.forEach((animal) => {
-                if (animal.y < board.offsetHeight - animalSizes[animal.type]) {
-                    animal.y += 2;  // 動物が下に落ちる速度
-                    animal.element.style.top = `${animal.y}px`;
+            const animal = document.getElementById('current-animal');
+            let y = 0;
+            let dropInterval = setInterval(() => {
+                if (y < board.offsetHeight - animalSizes['🐧']) {
+                    y += 2;  // 動物が下に落ちる速度
+                    animal.style.top = `${y}px`;
+                } else {
+                    clearInterval(dropInterval);  // 落ちたら止める
+                    animals.push({ type: animal.textContent, x: currentX, y: y, element: animal });
+                    checkAndEvolve();
                 }
-            });
+            }, 20);
         }
 
         function checkAndEvolve() {
@@ -150,8 +195,6 @@
             score = 0;
             updateScore();
         }
-
-        gameLoop();  // ゲーム開始
     </script>
 </body>
 </html>

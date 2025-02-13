@@ -50,7 +50,7 @@
     let animalIndex = 0; // 動物のインデックス
     let animalSpeed = 3; // 落下速度
     let isFalling = false; // 落下中かどうか
-    let isMovingAllowed = true; // 動物が動くことを許可するフラグ
+    let isMovingAllowed = false; // 動物が動くことを許可するフラグ（初期状態は動かない）
 
     // 動物をランダムに設定
     function setAnimal() {
@@ -58,8 +58,6 @@
       fallingAnimal.textContent = animals[animalIndex];
       fallingAnimal.style.left = `${Math.random() * (gameArea.clientWidth - 40)}px`; // ランダムに位置設定
       fallingAnimal.style.top = "-40px"; // 上からスタート
-      isFalling = true;
-      isMovingAllowed = true; // 動物の位置を初めて設定するので動かすことを許可
     }
 
     // 落下させる
@@ -81,31 +79,44 @@
 
     // タップまたはフリックで位置変更（動物がまだ落下していない場合のみ）
     gameArea.addEventListener("touchstart", (e) => {
-      if (!isMovingAllowed) return; // 落下中の動物には操作を無効にする
-
-      const touchX = e.touches[0].clientX;
-      // フィールドの範囲内で動物の位置を調整
-      const fieldLeft = field.getBoundingClientRect().left;
-      const fieldRight = field.getBoundingClientRect().right;
-      if (touchX >= fieldLeft && touchX <= fieldRight) {
-        fallingAnimal.style.left = touchX - fallingAnimal.clientWidth / 2 + "px";
+      if (isMovingAllowed) {
+        const touchX = e.touches[0].clientX;
+        // フィールドの範囲内で動物の位置を調整
+        const fieldLeft = field.getBoundingClientRect().left;
+        const fieldRight = field.getBoundingClientRect().right;
+        if (touchX >= fieldLeft && touchX <= fieldRight) {
+          fallingAnimal.style.left = touchX - fallingAnimal.clientWidth / 2 + "px";
+        }
       }
     });
 
     gameArea.addEventListener("touchmove", (e) => {
-      if (!isMovingAllowed) return; // 落下中の動物には操作を無効にする
-
-      const touchX = e.touches[0].clientX;
-      // フィールドの範囲内で動物の位置を調整
-      const fieldLeft = field.getBoundingClientRect().left;
-      const fieldRight = field.getBoundingClientRect().right;
-      if (touchX >= fieldLeft && touchX <= fieldRight) {
-        fallingAnimal.style.left = touchX - fallingAnimal.clientWidth / 2 + "px";
+      if (isMovingAllowed) {
+        const touchX = e.touches[0].clientX;
+        // フィールドの範囲内で動物の位置を調整
+        const fieldLeft = field.getBoundingClientRect().left;
+        const fieldRight = field.getBoundingClientRect().right;
+        if (touchX >= fieldLeft && touchX <= fieldRight) {
+          fallingAnimal.style.left = touchX - fallingAnimal.clientWidth / 2 + "px";
+        }
       }
     });
 
-    setAnimal(); // 初期動物の設定
-    fall(); // 動物を落下させる
+    // 動物の位置を設定し、落下を開始する
+    function startGame() {
+      setAnimal(); // 動物を設定
+      isMovingAllowed = true; // ユーザーが操作可能に
+      isFalling = true; // 落下開始
+      fall(); // 動物を落下させる
+    }
+
+    // ゲームスタートのトリガー（タップまたはフリックでスタート）
+    gameArea.addEventListener("click", () => {
+      if (!isFalling) {
+        startGame(); // 最初のタップで落下を開始
+      }
+    });
+
   </script>
 </body>
 </html>

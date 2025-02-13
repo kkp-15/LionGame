@@ -44,7 +44,7 @@
     const field = document.getElementById("field");
     const animals = ["🐧", "🐬", "🐼", "🐯", "🦁"]; // 新しい動物の絵文字
 
-    let animalSpeed = 3; // 落下速度
+    let animalSpeed = 6; // 落下速度を速くするために変更（数値を増加）
     let isFalling = false; // 落下中かどうか
     let isMovingAllowed = false; // 動物が動くことを許可するフラグ（初期状態は動かない）
     let animalsOnField = []; // 画面に表示されている動物たち
@@ -89,6 +89,8 @@
           allFallen = false; // 少なくとも1つの動物はまだ落下している
         } else {
           animal.style.top = fieldTop + "px"; // フィールド上に停止
+          // 下端に到達した動物は操作できないように
+          isMovingAllowed = false; 
         }
       });
 

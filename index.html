@@ -6,73 +6,48 @@
     <title>ライオンゲーム</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
             margin: 0;
-            background-color: #f0f0f0;
-        }
-
-        #title {
-            font-size: 30px;
-            font-weight: bold;
-            color: #FF5722;
-            margin-bottom: 20px;
-            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
-        }
-
-        #game-board {
-            width: 100%;
-            max-width: 300px;
-            height: 500px;
-            border: 2px solid black;
-            position: relative;
+            padding: 0;
             overflow: hidden;
+            font-family: Arial, sans-serif;
         }
-
-        .animal {
-            position: absolute;
-            transition: all 0.2s ease;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-        }
-
-        #score {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            font-size: 18px;
-            color: #333;
+        canvas {
+            display: block;
+            background: #f1f1f1;
         }
     </style>
 </head>
 <body>
-    <div id="title">ライオンゲーム</div>
-    <div id="game-board" onclick="dropAnimal()"> <!-- クリックで動物を落とす -->
-        <div id="score">スコア: 0</div>
-    </div>
-
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.55.2/phaser.min.js"></script>
     <script>
-        const board = document.getElementById('game-board');
-        let score = 0;
-        let animals = [];  // ゲームボード上の動物を管理
-
-        const animalTypes = ['🐧', '🐬', '🐼', '🐯', '🦁']; // 動物の絵文字の進化順
-
-        // 進化の順番を管理
-        const evolutionOrder = {
-            '🐧': '🐬',
-            '🐬': '🐼',
-            '🐼': '🐯',
-            '🐯': '🦁'
+        // ゲームの基本設定
+        const config = {
+            type: Phaser.AUTO,
+            width: 800,
+            height: 600,
+            physics: {
+                default: 'arcade',
+                arcade: {
+                    gravity: { y: 300 },
+                    debug: false
+                }
+            },
+            scene: {
+                preload: preload,
+                create: create,
+                update: update
+            }
         };
 
-        // 進化後のサイズを設定
+        const game = new Phaser.Game(config);
+
+        let animals;
+        let nextAnimal;
+        let score = 0;
+        let scoreText;
+
+        // ゲームの設定
+        const animalTypes = ['🐧', '🐬', '🐼', '🐯', '🦁'];
         const animalSizes = {
             '🐧': 20,  // 🐧が最も小さい
             '🐬': 30,
@@ -81,119 +56,79 @@
             '🦁': 60  // 🦁が最も大きい
         };
 
-        let currentX = Math.floor(Math.random() * 10) * 30; // 初期位置
-        let startTouchX = 0;
-        let offsetX = 0;
-
-        // 位置を更新
-        function updateAnimalPosition() {
-            const animalPosition = document.getElementById('current-animal');
-            if (animalPosition) {
-                animalPosition.style.left = `${currentX}px`;
-            }
+        function preload() {
+            // 画像のロード（今回は画像を使わず、絵文字を使用）
         }
 
-        // フリック操作で動物の位置を動かす
-        board.addEventListener('touchstart', (e) => {
-            startTouchX = e.touches[0].pageX;  // 最初のタッチ位置
-        });
+        function create() {
+            // 物理エンジンを使用するグループを作成
+            animals = this.physics.add.group();
 
-        board.addEventListener('touchmove', (e) => {
-            offsetX = e.touches[0].pageX - startTouchX;  // 移動量を計算
-            currentX = Math.max(0, Math.min(board.offsetWidth - 30, currentX + offsetX));
-            startTouchX = e.touches[0].pageX;  // 新しいタッチ位置を保存
-            updateAnimalPosition();  // 動物の位置を更新
-        });
+            // スコアテキストの作成
+            scoreText = this.add.text(16, 16, 'スコア: 0', { fontSize: '32px', fill: '#000' });
 
-        // フリック終了後に動物を落とす
-        board.addEventListener('touchend', (e) => {
-            dropAnimal();  // 動物を落とす
-        });
+            // 次の動物を生成
+            createNextAnimal();
+        }
 
-        function createAnimal(type) {
-            const animal = document.createElement('div');
-            animal.id = 'current-animal';  // 一時的な動物のID
-            animal.classList.add('animal');
-            animal.textContent = type;
-            animal.style.top = `0px`;
-            animal.style.left = `${currentX}px`;
-            animal.style.fontSize = `${animalSizes[type]}px`;  // サイズを進化に合わせて変更
-            board.appendChild(animal);
+        function update() {
+            // マウスまたはタッチで動物を落とす
+            if (this.input.activePointer.isDown) {
+                dropAnimal();
+            }
+
+            // 動物同士の衝突をチェック
+            this.physics.add.collider(animals, animals, animalCollision, null, this);
+        }
+
+        function createNextAnimal() {
+            // ランダムな動物を生成
+            nextAnimal = Phaser.Math.RND.pick(animalTypes);
         }
 
         function dropAnimal() {
-            const randomAnimal = animalTypes[Math.floor(Math.random() * animalTypes.length)];
-            createAnimal(randomAnimal);
-            moveAnimals();
+            // 動物を落とす
+            const x = this.input.activePointer.x;
+            const y = 0;  // 落ちる位置
+            const animal = animals.create(x, y, nextAnimal);
+            animal.setCollideWorldBounds(true);  // 画面外に出ないようにする
+            animal.setBounce(0.8);  // 反発力を設定
+            animal.setVelocity(0, 200);  // 落下速度を設定
+            createNextAnimal();  // 次の動物を生成
         }
 
-        function isOverlapping(x, y) {
-            // 既存の動物と重なっているか判定
-            return animals.some(animal => {
-                const animalX = animal.x;
-                const animalY = animal.y;
-                const animalSize = animalSizes[animal.type];
-                const newSize = animalSizes['🐧']; // 動物が落ちる大きさ
-                const buffer = 5; // 衝突回避のバッファ
-                return (
-                    x < animalX + animalSize + buffer &&
-                    x + newSize > animalX - buffer &&
-                    y < animalY + animalSize + buffer &&
-                    y + newSize > animalY - buffer
-                );
-            });
-        }
+        function animalCollision(animal1, animal2) {
+            // 同じ種類の動物が衝突した場合
+            if (animal1.texture.key === animal2.texture.key) {
+                // 動物を進化させる
+                evolveAnimal(animal1);
+                evolveAnimal(animal2);
 
-        function moveAnimals() {
-            const animal = document.getElementById('current-animal');
-            let y = 0;
-            let dropInterval = setInterval(() => {
-                if (y < board.offsetHeight - animalSizes['🐧']) {
-                    y += 2;  // 動物が下に落ちる速度
-                    animal.style.top = `${y}px`;
-                } else {
-                    clearInterval(dropInterval);  // 落ちたら止める
-                    animals.push({ type: animal.textContent, x: currentX, y: y, element: animal });
-                    checkAndEvolve();
-                }
-            }, 20);
-        }
-
-        function checkAndEvolve() {
-            animals.forEach((animal, index) => {
-                for (let i = index + 1; i < animals.length; i++) {
-                    if (animal.type === animals[i].type) {
-                        // 進化する処理
-                        if (evolutionOrder[animal.type]) {
-                            animals[i].type = evolutionOrder[animal.type];  // 次の進化
-                            animals[i].element.textContent = evolutionOrder[animal.type];
-                            animals[i].element.style.fontSize = `${animalSizes[evolutionOrder[animal.type]]}px`; // 新しいサイズに変更
-                            // スコア加算
-                            score += 10;
-                            updateScore();
-                        }
-                    }
-                }
-            });
-        }
-
-        function updateScore() {
-            document.getElementById('score').textContent = `スコア: ${score}`;
-        }
-
-        function checkGameOver() {
-            const topAnimals = animals.filter(animal => animal.y <= 0);
-            if (topAnimals.length > 0) {
-                alert('ゲームオーバー!');
-                resetGame();
+                // スコアを更新
+                updateScore();
             }
         }
 
-        function resetGame() {
-            animals.forEach(animal => animal.element.remove());
-            animals = [];
-            score = 0;
-            updateScore();
+        function evolveAnimal(animal) {
+            // 動物を進化させる
+            const currentAnimal = animal.texture.key;
+            const evolutionOrder = {
+                '🐧': '🐬',
+                '🐬': '🐼',
+                '🐼': '🐯',
+                '🐯': '🦁'
+            };
+
+            if (evolutionOrder[currentAnimal]) {
+                // 進化した動物を設定
+                animal.setTexture(evolutionOrder[currentAnimal]);
+                animal.setScale(animalSizes[evolutionOrder[currentAnimal]] / animalSizes[currentAnimal]);  // サイズを変更
+            }
+        }
+
+        function updateScore() {
+            score += 10;
+            scoreText.setText('スコア: ' + score);
         }
     </script>
 </body>

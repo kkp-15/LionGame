@@ -1,135 +1,81 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ライオンゲーム</title>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            overflow: hidden;
-            font-family: Arial, sans-serif;
-        }
-        canvas {
-            display: block;
-            background: #f1f1f1;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>動物落下ゲーム</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    #gameArea {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      background-color: #87CEEB; /* 空の色 */
+    }
+
+    #fallingAnimal {
+      position: absolute;
+      font-size: 40px;
+      top: -40px; /* 画面外からスタート */
+      left: 50%; /* 初期位置は中央 */
+      transition: left 0.2s ease;
+    }
+  </style>
 </head>
 <body>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/phaser/3.55.2/phaser.min.js"></script>
-    <script>
-        // ゲームの基本設定
-        const config = {
-            type: Phaser.AUTO,
-            width: 800,
-            height: 600,
-            physics: {
-                default: 'arcade',
-                arcade: {
-                    gravity: { y: 300 },
-                    debug: false
-                }
-            },
-            scene: {
-                preload: preload,
-                create: create,
-                update: update
-            }
-        };
+  <div id="gameArea">
+    <div id="fallingAnimal"></div>
+  </div>
 
-        const game = new Phaser.Game(config);
+  <script>
+    const gameArea = document.getElementById("gameArea");
+    const fallingAnimal = document.getElementById("fallingAnimal");
+    const animals = ["🐶", "🐱", "🐰", "🐻", "🦁"]; // 落下する動物の絵文字
 
-        let animals;
-        let nextAnimal;
-        let score = 0;
-        let scoreText;
+    let animalIndex = 0; // 動物のインデックス
+    let animalSpeed = 3; // 落下速度
+    let isFalling = false; // 落下中かどうか
 
-        // ゲームの設定
-        const animalTypes = ['🐧', '🐬', '🐼', '🐯', '🦁'];
-        const animalSizes = {
-            '🐧': 20,  // 🐧が最も小さい
-            '🐬': 30,
-            '🐼': 40,
-            '🐯': 50,
-            '🦁': 60  // 🦁が最も大きい
-        };
+    // 動物をランダムに設定
+    function setAnimal() {
+      animalIndex = Math.floor(Math.random() * animals.length);
+      fallingAnimal.textContent = animals[animalIndex];
+      fallingAnimal.style.left = `${Math.random() * (gameArea.clientWidth - 40)}px`; // ランダムに位置設定
+      fallingAnimal.style.top = "-40px"; // 上からスタート
+      isFalling = true;
+    }
 
-        function preload() {
-            // 画像のロード（今回は画像を使わず、絵文字を使用）
-        }
+    // 落下させる
+    function fall() {
+      if (!isFalling) return;
+      let topPosition = parseInt(fallingAnimal.style.top);
+      if (topPosition < gameArea.clientHeight - 40) {
+        fallingAnimal.style.top = topPosition + animalSpeed + "px";
+        requestAnimationFrame(fall); // 1フレームごとに落下
+      } else {
+        isFalling = false;
+        setAnimal(); // 落ちたら新しい動物を設定
+      }
+    }
 
-        function create() {
-            // 物理エンジンを使用するグループを作成
-            animals = this.physics.add.group();
+    // タップまたはフリックで位置変更
+    gameArea.addEventListener("touchstart", (e) => {
+      const touchX = e.touches[0].clientX;
+      fallingAnimal.style.left = touchX - fallingAnimal.clientWidth / 2 + "px";
+    });
 
-            // スコアテキストの作成
-            scoreText = this.add.text(16, 16, 'スコア: 0', { fontSize: '32px', fill: '#000' });
+    gameArea.addEventListener("touchmove", (e) => {
+      const touchX = e.touches[0].clientX;
+      fallingAnimal.style.left = touchX - fallingAnimal.clientWidth / 2 + "px";
+    });
 
-            // 次の動物を生成
-            createNextAnimal();
-        }
-
-        function update() {
-            // マウスまたはタッチで動物を落とす
-            if (this.input.activePointer.isDown) {
-                dropAnimal();
-            }
-
-            // 動物同士の衝突をチェック
-            this.physics.add.collider(animals, animals, animalCollision, null, this);
-        }
-
-        function createNextAnimal() {
-            // ランダムな動物を生成
-            nextAnimal = Phaser.Math.RND.pick(animalTypes);
-        }
-
-        function dropAnimal() {
-            // 動物を落とす
-            const x = this.input.activePointer.x;
-            const y = 0;  // 落ちる位置
-            const animal = animals.create(x, y, nextAnimal);
-            animal.setCollideWorldBounds(true);  // 画面外に出ないようにする
-            animal.setBounce(0.8);  // 反発力を設定
-            animal.setVelocity(0, 200);  // 落下速度を設定
-            createNextAnimal();  // 次の動物を生成
-        }
-
-        function animalCollision(animal1, animal2) {
-            // 同じ種類の動物が衝突した場合
-            if (animal1.texture.key === animal2.texture.key) {
-                // 動物を進化させる
-                evolveAnimal(animal1);
-                evolveAnimal(animal2);
-
-                // スコアを更新
-                updateScore();
-            }
-        }
-
-        function evolveAnimal(animal) {
-            // 動物を進化させる
-            const currentAnimal = animal.texture.key;
-            const evolutionOrder = {
-                '🐧': '🐬',
-                '🐬': '🐼',
-                '🐼': '🐯',
-                '🐯': '🦁'
-            };
-
-            if (evolutionOrder[currentAnimal]) {
-                // 進化した動物を設定
-                animal.setTexture(evolutionOrder[currentAnimal]);
-                animal.setScale(animalSizes[evolutionOrder[currentAnimal]] / animalSizes[currentAnimal]);  // サイズを変更
-            }
-        }
-
-        function updateScore() {
-            score += 10;
-            scoreText.setText('スコア: ' + score);
-        }
-    </script>
+    setAnimal(); // 初期動物の設定
+    fall(); // 動物を落下させる
+  </script>
 </body>
 </html>

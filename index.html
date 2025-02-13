@@ -47,6 +47,7 @@
     let animalSpeed = 8;
     let isFalling = false;
     let isMovingAllowed = false;
+    let isReadyToFall = false;
     let animalsOnField = [];
     let animalInAction = null;
 
@@ -56,13 +57,19 @@
       animal.textContent = animals[animalIndex];
       animal.classList.add("fallingAnimal");
 
-      const startX = gameArea.clientWidth / 2 - 20;
+      // 初期位置をランダムに設定（画面内の範囲で）
+      let startX;
+      do {
+        startX = Math.random() * (gameArea.clientWidth - 40);
+      } while (collisionCheck(startX));
+
       animal.style.left = `${startX}px`;
       animal.style.top = "0px"; // 上部から開始
 
       gameArea.appendChild(animal);
       animalInAction = animal;
       isMovingAllowed = true;
+      isReadyToFall = false; // タップするまで落下しない
     }
 
     function fall() {
@@ -90,18 +97,34 @@
         if (touchX >= 0 && touchX <= maxX) {
           animalInAction.style.left = `${touchX - 20}px`;
         }
+      } else if (!isFalling && isReadyToFall) {
+        isFalling = true;
+        fall();
       }
     });
 
     function startGame() {
       if (!isFalling) {
         setAnimal();
-        isFalling = true;
-        fall();
+        isReadyToFall = true; // 次の動物が落とせる状態
       }
     }
 
-    gameArea.addEventListener("click", startGame);
+    function collisionCheck(xPos) {
+      return animalsOnField.some(animal => {
+        const existingX = animal.getBoundingClientRect().left;
+        return Math.abs(existingX - xPos) < 40; // 40px以内なら重なる
+      });
+    }
+
+    gameArea.addEventListener("click", () => {
+      if (!isFalling && isReadyToFall) {
+        isFalling = true;
+        fall();
+      }
+    });
+
+    startGame(); // ゲーム開始
   </script>
 </body>
 </html>

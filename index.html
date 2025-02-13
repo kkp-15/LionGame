@@ -57,35 +57,50 @@
       animal.textContent = animals[animalIndex];
       animal.classList.add("fallingAnimal");
 
-      // 初期位置をランダムに設定（画面内の範囲で）
       let startX;
       do {
-        startX = Math.random() * (gameArea.clientWidth - 40);
-      } while (collisionCheck(startX));
+        startX = Math.random() * (gameArea.clientWidth - 50);
+      } while (collisionCheck(startX, 0));
 
       animal.style.left = `${startX}px`;
-      animal.style.top = "0px"; // 上部から開始
+      animal.style.top = "0px";
 
       gameArea.appendChild(animal);
       animalInAction = animal;
       isMovingAllowed = true;
-      isReadyToFall = false; // タップするまで落下しない
+      isReadyToFall = false;
     }
 
     function fall() {
       if (!isFalling || !animalInAction) return;
 
+      isMovingAllowed = false; // 落下中の移動禁止
+
       let topPosition = animalInAction.getBoundingClientRect().top - gameArea.getBoundingClientRect().top;
+      let leftPosition = parseFloat(animalInAction.style.left);
       const fieldTop = gameArea.clientHeight - field.clientHeight - 40;
 
       if (topPosition < fieldTop) {
-        animalInAction.style.top = `${topPosition + animalSpeed}px`;
-        requestAnimationFrame(fall);
+        // 下に動物があるかチェック
+        if (!collisionCheck(leftPosition, topPosition + animalSpeed)) {
+          animalInAction.style.top = `${topPosition + animalSpeed}px`;
+          requestAnimationFrame(fall);
+        } else {
+          // 横に転がる
+          let newX = findLandingPosition(leftPosition);
+          if (newX !== null) {
+            animalInAction.style.left = `${newX}px`;
+          } else {
+            // 横移動できない場合、その場で停止
+            animalsOnField.push(animalInAction);
+            isFalling = false;
+            setTimeout(startGame, 500);
+          }
+        }
       } else {
         animalInAction.style.top = `${fieldTop}px`;
         animalsOnField.push(animalInAction);
         isFalling = false;
-        isMovingAllowed = false;
         setTimeout(startGame, 500);
       }
     }
@@ -106,15 +121,27 @@
     function startGame() {
       if (!isFalling) {
         setAnimal();
-        isReadyToFall = true; // 次の動物が落とせる状態
+        isReadyToFall = true;
       }
     }
 
-    function collisionCheck(xPos) {
+    function collisionCheck(xPos, yPos) {
       return animalsOnField.some(animal => {
         const existingX = animal.getBoundingClientRect().left;
-        return Math.abs(existingX - xPos) < 40; // 40px以内なら重なる
+        const existingY = animal.getBoundingClientRect().top;
+        return Math.abs(existingX - xPos) < 50 && Math.abs(existingY - yPos) < 50;
       });
+    }
+
+    function findLandingPosition(originalX) {
+      let offset = 50;
+      for (let i = 0; i < 3; i++) {
+        let newX = originalX + (i % 2 === 0 ? offset : -offset);
+        if (newX > 0 && newX < gameArea.clientWidth - 50 && !collisionCheck(newX, animalInAction.getBoundingClientRect().top)) {
+          return newX;
+        }
+      }
+      return null;
     }
 
     gameArea.addEventListener("click", () => {
@@ -124,7 +151,7 @@
       }
     });
 
-    startGame(); // ゲーム開始
+    startGame();
   </script>
 </body>
 </html>

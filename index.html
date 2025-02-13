@@ -50,6 +50,7 @@
     let animalIndex = 0; // 動物のインデックス
     let animalSpeed = 3; // 落下速度
     let isFalling = false; // 落下中かどうか
+    let isMovingAllowed = true; // 動物が動くことを許可するフラグ
 
     // 動物をランダムに設定
     function setAnimal() {
@@ -58,6 +59,7 @@
       fallingAnimal.style.left = `${Math.random() * (gameArea.clientWidth - 40)}px`; // ランダムに位置設定
       fallingAnimal.style.top = "-40px"; // 上からスタート
       isFalling = true;
+      isMovingAllowed = true; // 動物の位置を初めて設定するので動かすことを許可
     }
 
     // 落下させる
@@ -66,6 +68,7 @@
       let topPosition = parseInt(fallingAnimal.style.top);
       const fieldTop = gameArea.clientHeight - field.clientHeight - 40; // フィールドの上端位置
 
+      // 動物がフィールドの下端を越えないように調整
       if (topPosition < fieldTop) {
         fallingAnimal.style.top = topPosition + animalSpeed + "px";
         requestAnimationFrame(fall); // 1フレームごとに落下
@@ -76,15 +79,29 @@
       }
     }
 
-    // タップまたはフリックで位置変更
+    // タップまたはフリックで位置変更（動物がまだ落下していない場合のみ）
     gameArea.addEventListener("touchstart", (e) => {
+      if (!isMovingAllowed) return; // 落下中の動物には操作を無効にする
+
       const touchX = e.touches[0].clientX;
-      fallingAnimal.style.left = touchX - fallingAnimal.clientWidth / 2 + "px";
+      // フィールドの範囲内で動物の位置を調整
+      const fieldLeft = field.getBoundingClientRect().left;
+      const fieldRight = field.getBoundingClientRect().right;
+      if (touchX >= fieldLeft && touchX <= fieldRight) {
+        fallingAnimal.style.left = touchX - fallingAnimal.clientWidth / 2 + "px";
+      }
     });
 
     gameArea.addEventListener("touchmove", (e) => {
+      if (!isMovingAllowed) return; // 落下中の動物には操作を無効にする
+
       const touchX = e.touches[0].clientX;
-      fallingAnimal.style.left = touchX - fallingAnimal.clientWidth / 2 + "px";
+      // フィールドの範囲内で動物の位置を調整
+      const fieldLeft = field.getBoundingClientRect().left;
+      const fieldRight = field.getBoundingClientRect().right;
+      if (touchX >= fieldLeft && touchX <= fieldRight) {
+        fallingAnimal.style.left = touchX - fallingAnimal.clientWidth / 2 + "px";
+      }
     });
 
     setAnimal(); // 初期動物の設定

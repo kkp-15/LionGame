@@ -44,10 +44,11 @@
     const field = document.getElementById("field");
     const animals = ["🐧", "🐬", "🐼", "🐯", "🦁"]; // 新しい動物の絵文字
 
-    let animalSpeed = 6; // 落下速度を速くするために変更（数値を増加）
+    let animalSpeed = 6; // 落下速度
     let isFalling = false; // 落下中かどうか
     let isMovingAllowed = false; // 動物が動くことを許可するフラグ（初期状態は動かない）
     let animalsOnField = []; // 画面に表示されている動物たち
+    let animalInAction = null; // 現在操作中の動物
 
     // 動物をランダムに設定
     function setAnimal() {
@@ -89,8 +90,10 @@
           allFallen = false; // 少なくとも1つの動物はまだ落下している
         } else {
           animal.style.top = fieldTop + "px"; // フィールド上に停止
-          // 下端に到達した動物は操作できないように
-          isMovingAllowed = false; 
+          // 落下した動物は操作不可に
+          if (animal !== animalInAction) {
+            isMovingAllowed = false;
+          }
         }
       });
 
@@ -125,27 +128,25 @@
 
     // タップまたはフリックで位置変更（動物がまだ落下していない場合のみ）
     gameArea.addEventListener("touchstart", (e) => {
-      if (isMovingAllowed) {
+      if (isMovingAllowed && animalInAction) {
         const touchX = e.touches[0].clientX;
         // フィールドの範囲内で動物の位置を調整
         const fieldLeft = field.getBoundingClientRect().left;
         const fieldRight = field.getBoundingClientRect().right;
         if (touchX >= fieldLeft && touchX <= fieldRight) {
-          const currentAnimal = animalsOnField[animalsOnField.length - 1];
-          currentAnimal.style.left = touchX - currentAnimal.clientWidth / 2 + "px";
+          animalInAction.style.left = touchX - animalInAction.clientWidth / 2 + "px";
         }
       }
     });
 
     gameArea.addEventListener("touchmove", (e) => {
-      if (isMovingAllowed) {
+      if (isMovingAllowed && animalInAction) {
         const touchX = e.touches[0].clientX;
         // フィールドの範囲内で動物の位置を調整
         const fieldLeft = field.getBoundingClientRect().left;
         const fieldRight = field.getBoundingClientRect().right;
         if (touchX >= fieldLeft && touchX <= fieldRight) {
-          const currentAnimal = animalsOnField[animalsOnField.length - 1];
-          currentAnimal.style.left = touchX - currentAnimal.clientWidth / 2 + "px";
+          animalInAction.style.left = touchX - animalInAction.clientWidth / 2 + "px";
         }
       }
     });
@@ -156,6 +157,7 @@
       if (!newAnimal) return; // 位置が重なっていた場合は処理を中断
 
       isMovingAllowed = true; // ユーザーが操作可能に
+      animalInAction = newAnimal; // 現在操作中の動物を設定
       isFalling = true; // 落下開始
       fall(); // 動物を落下させる
     }

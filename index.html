@@ -30,7 +30,7 @@
     .fallingAnimal {
       position: absolute;
       font-size: 40px;
-      top: 0px;
+      transition: transform 0.5s ease-out;
     }
   </style>
 </head>
@@ -44,7 +44,7 @@
     const field = document.getElementById("field");
     const animals = ["🐧", "🐬", "🐼", "🐯", "🦁"];
 
-    let animalSpeed = 8;
+    let animalSpeed = 10;
     let isFalling = false;
     let isMovingAllowed = false;
     let isReadyToFall = false;
@@ -78,31 +78,36 @@
 
       let topPosition = animalInAction.getBoundingClientRect().top - gameArea.getBoundingClientRect().top;
       let leftPosition = parseFloat(animalInAction.style.left);
+      let lowestY = getLowestY(leftPosition);
       const fieldTop = gameArea.clientHeight - field.clientHeight - 40;
 
-      if (topPosition < fieldTop) {
-        // 下に動物があるかチェック
-        if (!collisionCheck(leftPosition, topPosition + animalSpeed)) {
-          animalInAction.style.top = `${topPosition + animalSpeed}px`;
-          requestAnimationFrame(fall);
-        } else {
-          // 横に転がる
-          let newX = findLandingPosition(leftPosition);
-          if (newX !== null) {
-            animalInAction.style.left = `${newX}px`;
-          } else {
-            // 横移動できない場合、その場で停止
-            animalsOnField.push(animalInAction);
-            isFalling = false;
-            setTimeout(startGame, 500);
-          }
-        }
+      if (topPosition + animalSpeed < lowestY) {
+        // 下に障害物がないなら落下
+        animalInAction.style.top = `${topPosition + animalSpeed}px`;
+        requestAnimationFrame(fall);
       } else {
-        animalInAction.style.top = `${fieldTop}px`;
-        animalsOnField.push(animalInAction);
-        isFalling = false;
-        setTimeout(startGame, 500);
+        // 何かに接触したので転がる処理
+        animalInAction.style.top = `${lowestY}px`;
+        rollIfPossible(animalInAction);
       }
+    }
+
+    function rollIfPossible(animal) {
+      let left = parseFloat(animal.style.left);
+      let canRollRight = !collisionCheck(left + 50, parseFloat(animal.style.top));
+      let canRollLeft = !collisionCheck(left - 50, parseFloat(animal.style.top));
+
+      if (canRollRight) {
+        animal.style.left = `${left + 40}px`;
+        animal.style.transform = "rotate(360deg)";
+      } else if (canRollLeft) {
+        animal.style.left = `${left - 40}px`;
+        animal.style.transform = "rotate(-360deg)";
+      }
+
+      animalsOnField.push(animal);
+      isFalling = false;
+      setTimeout(startGame, 500);
     }
 
     gameArea.addEventListener("touchstart", (e) => {
@@ -125,23 +130,24 @@
       }
     }
 
+    function getLowestY(xPos) {
+      let lowestY = gameArea.clientHeight - field.clientHeight - 40;
+      animalsOnField.forEach(animal => {
+        const existingX = animal.getBoundingClientRect().left;
+        const existingY = animal.getBoundingClientRect().top;
+        if (Math.abs(existingX - xPos) < 50) {
+          lowestY = Math.min(lowestY, existingY - 40);
+        }
+      });
+      return lowestY;
+    }
+
     function collisionCheck(xPos, yPos) {
       return animalsOnField.some(animal => {
         const existingX = animal.getBoundingClientRect().left;
         const existingY = animal.getBoundingClientRect().top;
-        return Math.abs(existingX - xPos) < 50 && Math.abs(existingY - yPos) < 50;
+        return Math.abs(existingX - xPos) < 40 && Math.abs(existingY - yPos) < 40;
       });
-    }
-
-    function findLandingPosition(originalX) {
-      let offset = 50;
-      for (let i = 0; i < 3; i++) {
-        let newX = originalX + (i % 2 === 0 ? offset : -offset);
-        if (newX > 0 && newX < gameArea.clientWidth - 50 && !collisionCheck(newX, animalInAction.getBoundingClientRect().top)) {
-          return newX;
-        }
-      }
-      return null;
     }
 
     gameArea.addEventListener("click", () => {

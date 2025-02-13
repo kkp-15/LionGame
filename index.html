@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ライオンゲーム</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+
+        #title {
+            font-size: 30px;
+            font-weight: bold;
+            color: #FF5722;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        #game-board {
+            width: 100%;
+            max-width: 300px;
+            height: 500px;
+            border: 2px solid black;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .animal {
+            position: absolute;
+            transition: all 0.2s ease;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+        }
+
+        #score {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 18px;
+            color: #333;
+        }
+    </style>
+</head>
+<body>
+    <div id="title">ライオンゲーム</div>  <!-- タイトル表示 -->
+    <div id="game-board">
+        <div id="score">スコア: 0</div>
+    </div>
+
+    <script>
+        const board = document.getElementById('game-board');
+        let score = 0;
+        let animals = [];  // ゲームボード上の動物を管理
+
+        const animalTypes = ['🐧', '🐬', '🐼', '🐯', '🦁']; // 動物の絵文字の進化順
+
+        // 進化の順番を管理
+        const evolutionOrder = {
+            '🐧': '🐬',
+            '🐬': '🐼',
+            '🐼': '🐯',
+            '🐯': '🦁'
+        };
+
+        // 進化後のサイズを設定
+        const animalSizes = {
+            '🐧': 20,  // 🐧が最も小さい
+            '🐬': 30,
+            '🐼': 40,
+            '🐯': 50,
+            '🦁': 60  // 🦁が最も大きい
+        };
+
+        function createAnimal(type, x, y) {
+            const animal = document.createElement('div');
+            animal.classList.add('animal');
+            animal.textContent = type;
+            animal.style.top = `${y}px`;
+            animal.style.left = `${x}px`;
+            animal.style.fontSize = `${animalSizes[type]}px`;  // サイズを進化に合わせて変更
+            board.appendChild(animal);
+            animals.push({ type, x, y, element: animal });
+        }
+
+        function dropAnimal() {
+            const randomAnimal = animalTypes[Math.floor(Math.random() * animalTypes.length)];
+            createAnimal(randomAnimal, Math.floor(Math.random() * 10) * 30, 0);
+        }
+
+        function gameLoop() {
+            dropAnimal();
+            moveAnimals();  // 落ちた動物を移動
+            checkAndEvolve();  // 進化チェック
+            checkGameOver();   // ゲームオーバーチェック
+            requestAnimationFrame(gameLoop);  // ゲームループ
+        }
+
+        function moveAnimals() {
+            animals.forEach((animal) => {
+                if (animal.y < board.offsetHeight - animalSizes[animal.type]) {
+                    animal.y += 2;  // 動物が下に落ちる速度
+                    animal.element.style.top = `${animal.y}px`;
+                }
+            });
+        }
+
+        function checkAndEvolve() {
+            animals.forEach((animal, index) => {
+                for (let i = index + 1; i < animals.length; i++) {
+                    if (animal.type === animals[i].type) {
+                        // 進化する処理
+                        if (evolutionOrder[animal.type]) {
+                            animals[i].type = evolutionOrder[animal.type];  // 次の進化
+                            animals[i].element.textContent = evolutionOrder[animal.type];
+                            animals[i].element.style.fontSize = `${animalSizes[evolutionOrder[animal.type]]}px`; // 新しいサイズに変更
+                            // スコア加算
+                            score += 10;
+                            updateScore();
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateScore() {
+            document.getElementById('score').textContent = `スコア: ${score}`;
+        }
+
+        function checkGameOver() {
+            const topAnimals = animals.filter(animal => animal.y <= 0);
+            if (topAnimals.length > 0) {
+                alert('ゲームオーバー!');
+                resetGame();
+            }
+        }
+
+        function resetGame() {
+            animals.forEach(animal => animal.element.remove());
+            animals = [];
+            score = 0;
+            updateScore();
+        }
+
+        gameLoop();  // ゲーム開始
+    </script>
+</body>
+</html>
